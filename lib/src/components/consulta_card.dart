@@ -7,13 +7,15 @@ class ConsultaCard extends StatelessWidget {
   const ConsultaCard({
     super.key,
     required this.consulta,
-    required this.onConfirmar,
-    required this.onCancelar,
+    this.onConfirmar,
+    this.onCancelar,
+    this.onVerDetalhes,
   });
 
   final Consulta consulta;
-  final VoidCallback onConfirmar;
-  final VoidCallback onCancelar;
+  final void Function(int id)? onConfirmar;
+  final void Function(int id)? onCancelar;
+  final void Function(int id)? onVerDetalhes;
 
   @override
   Widget build(BuildContext context) {
@@ -30,34 +32,19 @@ class ConsultaCard extends StatelessWidget {
           _Secao(
             titulo: 'Paciente',
             children: [
-              Text(
-                consulta.paciente.nome,
-                style: ConsultaCardStyles.valor,
-              ),
+              Text(consulta.paciente.nome, style: ConsultaCardStyles.valor),
               const SizedBox(height: 4),
-              Text(
-                consulta.paciente.cpf,
-                style: ConsultaCardStyles.info,
-              ),
-              Text(
-                consulta.paciente.email,
-                style: ConsultaCardStyles.info,
-              ),
+              Text(consulta.paciente.cpf, style: ConsultaCardStyles.info),
+              Text(consulta.paciente.email, style: ConsultaCardStyles.info),
             ],
           ),
 
           _Secao(
             titulo: 'Médico',
             children: [
-              Text(
-                consulta.medico.nome,
-                style: ConsultaCardStyles.valor,
-              ),
+              Text(consulta.medico.nome, style: ConsultaCardStyles.valor),
               const SizedBox(height: 4),
-              Text(
-                consulta.medico.crm,
-                style: ConsultaCardStyles.info,
-              ),
+              Text(consulta.medico.crm, style: ConsultaCardStyles.info),
               Text(
                 consulta.medico.especialidade.nome,
                 style: ConsultaCardStyles.info,
@@ -67,7 +54,9 @@ class ConsultaCard extends StatelessWidget {
 
           _Secao(
             titulo: 'Consulta',
-            ultima: consulta.status != StatusConsulta.agendada,
+            ultima:
+                onConfirmar == null ||
+                consulta.status != StatusConsulta.agendada,
             children: [
               Text(
                 formatarData(consulta.data),
@@ -78,6 +67,7 @@ class ConsultaCard extends StatelessWidget {
                 formatarValor(consulta.valor),
                 style: ConsultaCardStyles.info,
               ),
+
               if (consulta.observacoes != null &&
                   consulta.observacoes!.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -89,15 +79,20 @@ class ConsultaCard extends StatelessWidget {
             ],
           ),
 
-          if (consulta.status == StatusConsulta.agendada)
+          if (consulta.status == StatusConsulta.agendada &&
+              onConfirmar != null &&
+              onCancelar != null)
             _BotoesAcao(
-              onConfirmar: onConfirmar,
-              onCancelar: onCancelar,
+              onConfirmar: () => onConfirmar!(consulta.id),
+              onCancelar: () => onCancelar!(consulta.id),
             )
-          else
-            _MensagemStatus(
-              status: consulta.status,
-            ),
+          else if (consulta.status != StatusConsulta.agendada)
+            _MensagemStatus(status: consulta.status),
+
+          if (onVerDetalhes != null) ...[
+            const SizedBox(height: 12),
+            _BotaoVerDetalhes(onPressed: () => onVerDetalhes!(consulta.id)),
+          ],
         ],
       ),
     );
@@ -105,24 +100,16 @@ class ConsultaCard extends StatelessWidget {
 }
 
 class _BadgeStatus extends StatelessWidget {
-  const _BadgeStatus({
-    required this.status,
-  });
+  const _BadgeStatus({required this.status});
 
   final StatusConsulta status;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: ConsultaCardStyles.badge(status),
-      child: Text(
-        status.rotulo,
-        style: ConsultaCardStyles.statusTexto,
-      ),
+      child: Text(status.rotulo, style: ConsultaCardStyles.statusTexto),
     );
   }
 }
@@ -148,10 +135,7 @@ class _Secao extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            titulo,
-            style: ConsultaCardStyles.label,
-          ),
+          Text(titulo, style: ConsultaCardStyles.label),
           const SizedBox(height: 8),
           ...children,
         ],
@@ -161,10 +145,7 @@ class _Secao extends StatelessWidget {
 }
 
 class _BotoesAcao extends StatelessWidget {
-  const _BotoesAcao({
-    required this.onConfirmar,
-    required this.onCancelar,
-  });
+  const _BotoesAcao({required this.onConfirmar, required this.onCancelar});
 
   final VoidCallback onConfirmar;
   final VoidCallback onCancelar;
@@ -179,17 +160,12 @@ class _BotoesAcao extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.sucesso,
             foregroundColor: AppColors.branco,
-            padding: const EdgeInsets.symmetric(
-              vertical: 14,
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: const Text(
-            'Confirmar',
-            style: ConsultaCardStyles.botaoTexto,
-          ),
+          child: const Text('Confirmar', style: ConsultaCardStyles.botaoTexto),
         ),
         const SizedBox(height: 12),
         ElevatedButton(
@@ -197,27 +173,46 @@ class _BotoesAcao extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.perigo,
             foregroundColor: AppColors.branco,
-            padding: const EdgeInsets.symmetric(
-              vertical: 14,
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: const Text(
-            'Cancelar',
-            style: ConsultaCardStyles.botaoTexto,
-          ),
+          child: const Text('Cancelar', style: ConsultaCardStyles.botaoTexto),
         ),
       ],
     );
   }
 }
 
+class _BotaoVerDetalhes extends StatelessWidget {
+  const _BotaoVerDetalhes({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primaria,
+          side: const BorderSide(color: AppColors.primaria),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: const Text(
+          'Ver Detalhes',
+          style: ConsultaCardStyles.botaoDetalhesTexto,
+        ),
+      ),
+    );
+  }
+}
+
 class _MensagemStatus extends StatelessWidget {
-  const _MensagemStatus({
-    required this.status,
-  });
+  const _MensagemStatus({required this.status});
 
   final StatusConsulta status;
 
@@ -230,9 +225,7 @@ class _MensagemStatus extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: ConsultaCardStyles.mensagem(status),
       child: Text(
-        confirmada
-            ? 'Consulta confirmada com sucesso!'
-            : 'Consulta cancelada',
+        confirmada ? 'Consulta confirmada com sucesso!' : 'Consulta cancelada',
         textAlign: TextAlign.center,
         style: ConsultaCardStyles.mensagemTexto,
       ),
